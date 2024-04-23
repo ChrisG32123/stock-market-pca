@@ -1,0 +1,57 @@
+#!/bin/bash --login
+
+# Job name:
+#SBATCH --job-name=FinancialMarketAnalysis
+
+# Number of nodes
+#SBATCH --nodes=64
+
+# Memory per Node
+# Specify "M" or "G" for MB and GB respectively
+#SBATCH --mem=16G
+
+# Wall time
+# Format: "minutes", "hours:minutes:seconds", 
+# "days-hours", or "days-hours:minutes"
+#SBATCH --time=04:00:00
+
+# Standard output and error to file
+# %x: job name, %j: job ID
+#SBATCH --output=%x-%j.SLURMout
+
+# Load necessary modules
+module purge
+module load GCC/10.3.0 OpenMPI/4.1.1 Eigen
+
+# Define executable
+executable_name='portfolio_parallel.out'
+
+# Define CSV to save data
+csv_filename='simulation_results.csv'
+
+# Define parameters
+num_portfolios=10000
+risk_free_rate=0.02
+trading_days=252
+
+# Possible MPI ranks and OpenMP threads configurations
+mpi_ranks=(1 2 4 8 16 32 64)
+openMP_threads=(1 2 4 8 16 32 64)
+
+echo "Running simulation for $trading_days trading days with $num_portfolios portfolio simulations"
+
+# Loop over each configuration of MPI ranks and OpenMP threads
+for ranks in "${mpi_ranks[@]}"; do
+    for threads in "${openMP_threads[@]}"; do
+
+        echo "Running Simulation, MPI ranks=$ranks, OMP threads=$threads"
+
+        # Execute the program with current configuration and capture the output
+        srun -n $ranks ./$executable_name $threads $num_portfolios $risk_free_rate $trading_days $csv_filename
+    done
+done
+
+# In single execution:
+# mpicxx -fopenmp portfolio_parallel.cpp -o portfolio_parallel.out
+# chmod 740 portfolio_parallel.out
+# mpiexec -np 2 portfolio_parallel.out 2 10000 0.02 252 simulaiton_results.csv
