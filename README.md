@@ -80,53 +80,66 @@ The data amassed in `simulation_results.csv` constituted the basis for all subse
 
 ## Results
 
-The implementation of parallel computing approaches in this project has yielded quantifiable improvements in the efficiency and performance of portfolio optimization simulations. Utilizing both MPI and OpenMP, the system was tasked with computing the optimal distribution of weights across 10,000 simulated portfolios, each representing a unique investment strategy within the constraints of the specified risk-free rate and trading days.
+The implementation of parallel computing approaches in this project has yielded quantifiable improvements in the efficiency and performance of portfolio optimization simulations. Utilizing both MPI and OpenMP, the system was tasked with computing the optimal distribution of weights across $10,000$ simulated portfolios, each representing a unique investment strategy within the constraints of the specified risk-free rate and trading days. For a risk of $0.02$ and considering the stocks 3M, Adobe, Google, Appleid Materials, and Amanzon, we get the following results:
+
+Optimal Weights:
+
+    MMM: 0.0048
+    ADBE: 0.0085
+    GOOGL: 0.3250
+    AMAT: 0.6084
+    AMZN: 0.0533
+
+![image](OptimalWeightsRun.png)
+
+A portfolio with this description would yield 
+
+    Sharpe ratio: 0.6279
+    Expected Annual Return: 0.2490
+    Expected Volatility: 0.3647
+
+The code is robust such that any subset of any number of stocks can be chosen.
 
 ### Distribution of Max Sharpe Ratios
-The Sharpe ratio is a critical measure used to assess the risk-adjusted return of an investment portfolio. Our simulations produced a diverse range of Sharpe ratios, highlighting the potential for different risk-return balances. The distribution of these ratios informs us about the most likely outcomes one can expect when selecting a portfolio at random from the simulation set.
+The distribution of these Sharpe ratios informs us about the most likely outcomes one can expect when selecting a portfolio at random from the simulation set. The simulations produced a wide range of Sharpe ratios, consistently creating right skewed distributions that had a maximum around the $0.6$ mark, highlighting the potential for different risk-return balances.
 
 ![image](SharpeDistribution.png)
 
 ### Scaling Analyses
 Scaling studies were a focal point of the project, demonstrating the effects of varying the number of MPI ranks and OpenMP threads on the computational performance. Both strong and weak scaling were examined to understand the scalability of our parallelized portfolio optimization process.
 
-#### Strong Scaling
-With a fixed problem size, increasing the number of MPI ranks showed a decrease in wall time, illustrating how distributing the workload across more processors can speed up the computation. However, the benefits diminish as the ranks increase, indicating a point of optimal parallel efficiency.
+#### Strong Scaling & Speed Up
+Strong scaling measures the performance improvement when a fixed problem size is distributed across an increasing number of processors. In our case, we observed a significant speedup as the number of MPI ranks increased. The speedup graph depicts a linear trend, indicative of the benefits garnered from parallel computation. This speedup, however, is not limitless; as the number of processors increases, the marginal gains decrease due to the overhead associated with inter-processor communication and diminished workload per processor.
 
-![image](StrongScaling.png)
+![image](SpeedUp.png)
 
-#### Weak Scaling
-Holding the workload per processor constant while increasing the number of processors, we observed a slight increase in the average wall time. This suggests that the additional overhead of coordinating more processors slightly impacts performance but remains within an acceptable efficiency range.
+As the number of MPI ranks continues to increase, we can expect the speed up to plateau. until the overhead of creating and communicating between ranks exceeds the reduced computation per rank.
 
-![image](WeakScaling.png)
+#### Weak Scaling & Efficiency
+Weak scaling, on the other hand, keeps the workload per processor constant while increasing the number of processors. As the number of MPI ranks increases, we generally expect the efficiency to decrease due to the overhead associated with communication and synchronization among an increasing number of processes. The graph confirms this expectation, showing a downward trend in efficiency as we move from left to right along the x-axis, which represents an increasing number of MPI ranks.
+
+![image](Efficiency.png)
+
+The sharp drop in efficiency when moving from a single rank to a larger number suggests that there is a significant initial cost to distributing the workload across multiple processors. As more ranks are added, the efficiency continues to decline, but at a slower rate, indicating that the relative overhead cost decreases after a certain point. However, the consistent downward trajectory suggests that adding more MPI ranks eventually leads to diminishing returns in terms of efficiency.
 
 ### MPI vs. OpenMP Wall Time
 By plotting MPI Wall Time against OpenMP Wall Time across different configurations, we discerned the interplay between MPI and OpenMP in influencing execution time. As expected, there is a trade-off between MPI process distribution and OpenMP thread-level parallelism, suggesting a fine balance is key to optimal performance.
 
 ![image](WallTimes.png)
 
-### Speedup and Efficiency
-The speedup graph confirmed that as we increased MPI ranks, our program executed faster, showcasing the benefits of parallel computation. Nonetheless, the efficiency graph indicated that increasing ranks also led to a reduction in parallel efficiency, reflecting the complexity and overhead associated with managing more parallel processes.
+From the graph, we can observe how the OpenMP wall time varies with an increase in the number of threads and across different numbers of MPI ranks. It appears that for lower counts of OpenMP threads, the wall time decreases noticeably as threads double; however, the decrease in wall time becomes less pronounced at higher thread counts, suggesting a diminishing return on investment in more OpenMP threads.
 
-![image](SpeedUp.png)
-
-![image](Efficiency.png)
+Additionally, the spread and position of the points for each MPI rank also offer insights into the interplay between the MPI and OpenMP paradigms in the overall computational performance. The clustering of points at lower OpenMP thread counts and higher wall times for certain MPI ranks could indicate a potential bottleneck or inefficiency in the parallel computation setup for those specific configurations.
 
 In summary, the results from this project emphasize the importance of parallel computing in financial modeling and analysis. Through careful calibration of MPI and OpenMP parameters, we achieved substantial reductions in computation time without sacrificing accuracy, thereby facilitating more effective portfolio optimization and management.
 
-### Computational Efficiency and Performance Gains:
-The parallel computing approach slashed the overall computational time, showcasing efficiency gains, particularly when analyzing the scaling impact on large portfolio sets.
-
-### Impact on Portfolio Optimization Outcomes:
-The optimized portfolios, surfaced through these simulations, shed light on potential investment strategies, providing valuable insights for risk-averse and risk-tolerant investors alike.
-
-## Verification
+### Verification
 
 To verify that the parallel implementation is correct, one can check the max Sharpe ratio and the optimal weights for the serial codes `portfolio.cpp` or `portfolio.ipynb` with those of the parallel code. Unfortunately, the verification tests showed an issue with the implemnetation of one of the parallel implementations, MPI, as seen below:
 
 ![image](OptimalSharpe.png)
 
-The broadcasting of the adjusted closing data to all nodes led to an issue that unfortunately led to a poorer result of the program.
+The broadcasting of the adjusted closing data to all nodes led to an issue that unfortunately led to a poorer result of the program. Thus, corrections need to be made on how MPI handles the memory as the number of ranks increases.
 
 ## Conclusions
 
